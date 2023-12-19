@@ -1,5 +1,5 @@
 %%%% -*- Mode: Prolog -*-
-%%%% prova.pl
+%%%% OOΠ.pl
 
 %%% def class definisce la struttura di una classe e la memorizza nella
 %%% “base di conoscenza” di Prolog.
@@ -25,4 +25,4 @@ field(Instance, Field_name, Result)
 %%% fieldx: estrae il valore da una classe percorrendo una catena di attributi.
 fieldx(Instance, Field_name, Result)
 
-%%% end of file -- prova.pl
+%%% end of file -- OOΠ.pl
