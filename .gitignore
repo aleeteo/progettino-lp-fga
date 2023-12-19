@@ -2,11 +2,6 @@
 .idea
 *.log
 tmp/
-esperimenti/*
 esperimenti/
-esempi/*
-<<<<<<< HEAD
 esempi/
-=======
 *.fasl
->>>>>>> 98c6329 (minor change and added main lisp func)
