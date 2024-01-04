@@ -50,11 +50,11 @@
                       (cons (first list)
                             (proc-method (first list)
                                          (second list))))
-                     (make-table))
+                     (make-table (cddr (list))))
              (append (list
                       (cons (fist list)
                             (second list)))
-                     (make-table (cdr (cdr (list)))))))))
+                     (make-table (cddr (list))))))))
 
 (defun is-method (partt) t)
 (defun proc-method (partt) partt)
