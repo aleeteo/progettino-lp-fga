@@ -59,8 +59,8 @@
 (defun is-method (partt) t)
 (defun proc-method (partt) partt)
 
-                                        ;TODO create-assoc function
-                                        ;TODO is-method function
-                                        ;TODO proc-method function
+                                        ;DONE create-assoc function
+                                        ;DONE is-method function
+                                        ;DONE proc-method function
                                         ;TODO part-exist function
                                         ;TODO get-part function
