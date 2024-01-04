@@ -2,13 +2,17 @@
 ;;; OOΛ.lisp
 
 (defparameter central-memory (make-hash-table))
+
 ;;; def-class definisce la struttura di una classe e la memorizza
 ;;; in una locazione centralizzata (una variabile globale).
 (defun def-class (class-name parents &rest parts)
   (cond ((and (symbolp class-name)
               (listp parents))
-         t) ;TODO creazione classe
-        (t (error "Error: invalid class"))))
+         (let (table (make-table parts))
+           (setf (gethash class-name memory)
+                 (cons parents table)))
+         class-name)
+        (t (error "Errore: classe invalida"))))
 
 ;;; make: crea una nuova istanza di una classe.
 (defun make (class-name &rest parts)
@@ -34,8 +38,29 @@
 (defun field* (instance field-name))
 ;;; end od file -- OOΛ.lisp
 
-                                        ;TODO create-assoc funcion
-                                        ;TODO is-method func
-                                        ;TODO process-method function
+(defun make-table (list)
+  (cond ((null (list)) nil)
+        ((not (symbolp (first list)))
+         (error "Errore: la chiave non è un simbolo"))
+        ((null (second list))
+         (error "Errore: nessun valore da abbinare alla chiave"))
+        (t
+         (if (is-method (second (list)))
+             (append (list
+                      (cons (first list)
+                            (proc-method (first list)
+                                         (second list))))
+                     (make-table))
+             (append (list
+                      (cons (fist list)
+                            (second list)))
+                     (make-table (cdr (cdr (list)))))))))
+
+(defun is-method (partt) t)
+(defun proc-method (partt) partt)
+
+                                        ;TODO create-assoc function
+                                        ;TODO is-method function
+                                        ;TODO proc-method function
                                         ;TODO part-exist function
                                         ;TODO get-part function
