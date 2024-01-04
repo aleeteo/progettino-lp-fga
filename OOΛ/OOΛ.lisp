@@ -59,8 +59,24 @@
 (defun is-method (partt) t)
 (defun proc-method (partt) partt)
 
+(defun is-method (method*)
+  (if (listp method*)
+    (if(and
+      (stringp (
+				first method*))
+      (listp (
+			  second method*))
+      (listp (
+			  third method*)))
+	  t
+	  nil)
+  )
+)
+
+
                                         ;DONE create-assoc function
                                         ;DONE is-method function
                                         ;DONE proc-method function
                                         ;TODO part-exist function
                                         ;TODO get-part function
+
