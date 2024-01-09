@@ -57,13 +57,10 @@
                      (make-table (cddr (list))))))))
 
 (defun is-method (method*)
-  (if (listp method*)
-      (if(and
-          (stringp (first method*))
-          (listp (second method*))
-          (listp (third method*)))
-         t
-         nil)))
+  (and (listp method*)
+       (stringp (first method*))
+       (listp (second method*))
+       (listp (third method*))))
 
 
                                         ;DONE create-assoc function
