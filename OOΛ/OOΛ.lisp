@@ -58,7 +58,7 @@
 
 (defun is-method (method*)
   (and (listp method*)
-       (stringp (first method*))
+       (symbolp (first method*))
        (listp (second method*))
        (listp (third method*))))
 
