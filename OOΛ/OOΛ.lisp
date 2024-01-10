@@ -9,7 +9,7 @@
   (cond ((and (symbolp class-name)
               (listp parents))
          (let (table (make-table parts))
-           (setf (gethash class-name memory)
+           (setf (gethash class-name central-memory)
                  (cons parents table)))
          class-name)
         (t (error "Errore: classe invalida"))))
@@ -38,23 +38,34 @@
 (defun field* (instance field-name))
 ;;; end od file -- OOΛ.lisp
 
-(defun make-table (list)
-  (cond ((null (list)) nil)
-        ((not (symbolp (first list)))
-         (error "Errore: la chiave non è un simbolo"))
-        ((null (second list))
-         (error "Errore: nessun valore da abbinare alla chiave"))
-        (t
-         (if (is-method (second (list)))
-             (append (list
-                      (cons (first list)
-                            (proc-method (first list)
-                                         (second list))))
-                     (make-table (cddr (list))))
-             (append (list
-                      (cons (fist list)
-                            (second list)))
-                     (make-table (cddr (list))))))))
+;; (defun make-table (list)
+;;   (cond ((null (list)) nil)
+;;         ((not (symbolp (first list)))
+;;          (error "Errore: la chiave non è un simbolo"))
+;;         ((null (second list))
+;;          (error "Errore: nessun valore da abbinare alla chiave"))
+;;         (t
+;;          (if (is-method (second (list)))
+;;              (append (list
+;;                       (cons (first list)
+;;                             (proc-method (first list)
+;;                                          (second list))))
+;;                      (make-table (cddr (list))))
+;;              (append (list
+;;                       (cons (first list)
+;;                             (second list)))
+;;                      (make-table (cddr (list))))))))
+
+;; (defun make-table (parts)
+;;   (cond ((null parts) nil)
+;;         ((not (listp (car parts))) nil)
+;;         ((eql (caar parts) 'fields)
+;;          (cons (make-table-fields (cdr (car parts)))
+;;                (make-table (cdr parts))))
+;;         ((eql (caar parts) 'methods)
+;;          (cons (make-table (cdr parts))
+;;                (make-table-methods (cdr (car parts)))))
+;;         (t )))
 
 (defun is-method (method*)
   (if (listp method*)
@@ -65,10 +76,8 @@
          t
          nil)))
 
-
                                         ;DONE create-assoc function
                                         ;DONE is-method function
                                         ;DONE proc-method function
                                         ;TODO part-exist function
                                         ;TODO get-part function
-
