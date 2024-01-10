@@ -67,15 +67,22 @@
 ;;                (make-table-methods (cdr (car parts)))))
 ;;         (t )))
 
+;;; is-method: controlla se una lista è un metodo (in part methods)
 (defun is-method (method*)
-  (if (listp method*)
-      (if(and
-          (stringp (first method*))
-          (listp (second method*))
-          (listp (third method*)))
-         t
-         nil)))
+  (and (listp method*)
+       (symbolp (first method*))
+       (listp (second method*))
+       (listp (third method*))))
 
+<<<<<<< HEAD
+=======
+;;; is-class: verifica dato il nome di una classe se essa è un simbolo e se ha una hash table associata ad essa
+(defun is-class (class-name)
+    (and
+        (symbolp class-name)
+        (hash-table-p (symbol-value class-name))))
+
+>>>>>>> origin/main
                                         ;DONE create-assoc function
                                         ;DONE is-method function
                                         ;DONE proc-method function
