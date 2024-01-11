@@ -54,15 +54,15 @@
             (t (error "ERROR: given value is not an instance of the specified class")))
       (error "ERROR: given value can't be an instance, as value is not a list")))
 
-;; field retituisce il valore del campo field-name nell'istanza instance
+;;; field prende come argomenti una istanza e il nome
+;;; di un campo dell'istanza e ne restituisce il valore
 (defun field (instance field-name)
   (cond
     ((not (is-instance instance)) nil)
     ((not (symbolp field-name)) nil)
     (t (if (deep-member field-name (fifth instance))
            (find-field field-name (fifth instance))
-           (find-field field-name
-                       (cdr (third (class-spec (third instance)))))))))
+           (car (list (field-class field-name (third instance))))))))
 
 (defun field* (instance &rest field-names)
   (cond ((not (is-instance instance)) (error "ERROR: Not an instance"))
@@ -151,14 +151,18 @@
               (second fields)
               (find-field field-name (cddr fields))))))
 
+;;; field-class uguale a field ma sulle classi
+(defun field-class (field-name class-name)
+  (let ((class-fields (rest (third (class-spec class-name)))))
+    (if (deep-member field-name class-fields)
+        (find-field field-name class-fields)
+        (values-list
+         (remove nil
+                 (mapcar
+                  (lambda (p) (field-class field-name p))
+                  (second (class-spec class-name))))))))
+
 ;;; TESTS
-;; (def-class 'person nil '(fields (name "Eve") (age 21 integer)))
-(def-class 'address nil '(fields (city "Unknown City") (street "Unknown Street")))
-(def-class 'person nil '(fields (name "Unknown") (address (make 'address))))
-
-(defparameter person-instance (make 'person 'name "Alice" 'address (make 'address 'city "Wonderland" 'street "Rabbit Hole Lane")))
-
-(field* person-instance 'address 'city)   ; Restituisce "Wonderland"
-(field* person-instance 'address 'street) ; Restituisce "Rabbit Hole Lane"
+(def-class 'person nil '(fields (name "Eve") (age 21 integer)))
 
 ;;;; end of file -- ool.lisp
