@@ -59,7 +59,20 @@
   (cond
     ((not (is-instance instance)) nil)
     ((not (symbolp field-name)) nil)
-    (t (find-field field-name (fifth instance)))))
+    (t (if (deep-member field-name (fifth instance))
+           (find-field field-name (fifth instance))
+           (find-field field-name
+                       (cdr (third (class-spec (third instance)))))))))
+
+(defun field* (instance &rest field-names)
+  (cond ((not (is-instance instance)) (error "ERROR: Not an instance"))
+        ((null field-names) (error "No field names provided"))
+        (t (reduce (lambda (obj field-name)
+                     (if (listp obj)
+                         (field obj field-name)
+                         (error "Intermediate value is not an instance")))
+                   field-names
+                   :initial-value instance))))
 
 ;;; FUNZIONI AGGIUNTIVE
 
@@ -130,12 +143,22 @@
 (defun find-field (field-name fields)
   (if (null fields)
       nil
-      (if (equal field-name (first fields))
-          (second fields)
-          (find-field field-name (nthcdr 2 fields)))))
-
+      (if (listp (car fields))
+          (if (equal field-name (second (car fields)))
+              (fourth (car fields))
+              (find-field field-name (cdr fields)))
+          (if (equal field-name (first fields))
+              (second fields)
+              (find-field field-name (cddr fields))))))
 
 ;;; TESTS
-(def-class 'person nil '(fields (name "Eve") (age 21 integer)))
+;; (def-class 'person nil '(fields (name "Eve") (age 21 integer)))
+(def-class 'address nil '(fields (city "Unknown City") (street "Unknown Street")))
+(def-class 'person nil '(fields (name "Unknown") (address (make 'address))))
+
+(defparameter person-instance (make 'person 'name "Alice" 'address (make 'address 'city "Wonderland" 'street "Rabbit Hole Lane")))
+
+(field* person-instance 'address 'city)   ; Restituisce "Wonderland"
+(field* person-instance 'address 'street) ; Restituisce "Rabbit Hole Lane"
 
 ;;;; end of file -- ool.lisp
