@@ -1,12 +1,18 @@
-(defparameter classes-specs (make-hash-table))
+;;;; -*- Mode: Lisp -*-
+;;;; Melon Cristiano 899647
+;;;; Teodori Alessandro 899894
+;;;; ool.lisp
+
+(defparameter *classes-specs* (make-hash-table))
 
 (defun add-class-spec (name class-spec)
-  (setf (gethash name classes-specs) class-spec))
+  (setf (gethash name *classes-specs*) class-spec))
 
 (defun class-spec (name)
-  (gethash name classes-specs))
+  (gethash name *classes-specs*))
 
-
+;;; def-class consente di creare
+;;; e inserire in memoria una classe
 (defun def-class (class-name parents &rest part)
   (cond
     ((and (symbolp class-name) (listp parents))
@@ -20,7 +26,45 @@
      class-name)
     (t (error "ERROR: class-name or parents not valid!"))))
 
+;;; make consente di creare un'istanza di una classe
+(defun make (class-name &rest parts)
+  (cond
+    ((is-class class-name)
+     (let ((class-specs (class-spec class-name)))
+       (if (verify-instance-fields class-specs parts)
+           (append (list 'oolinst)
+                   (list :class class-name :fields parts)))))
+    (t (error "ERROR: given class not valid"))))
 
+;;; is-class verifica che il nome della classe
+;;; passata sia di una classe presente in memoria
+(defun is-class (class-name)
+  (and (symbolp class-name)
+       (gethash class-name *classes-specs*)))
+
+;;; is-insnace verifica che l'oggetto passato sia una
+;;; istanza di una classe
+(defun is-instance (value &optional (class-name T))
+  (if (listp value)
+      (cond ((and (equal (car value) 'OOLINST)
+                  (equal class-name 'T)) T)
+            ((and (equal (car value) 'OOLINST)
+                  (equal (third value) class-name)) T)
+            ((deep-member class-name (second (class-spec (third value)))) T)
+            (t (error "ERROR: given value is not an instance of the specified class")))
+      (error "ERROR: given value can't be an instance, as value is not a list")))
+
+;; field retituisce il valore del campo field-name nell'istanza instance
+(defun field (instance field-name)
+  (cond
+    ((not (is-instance instance)) nil)
+    ((not (symbolp field-name)) nil)
+    (t (find-field field-name (fifth instance)))))
+
+;;; FUNZIONI AGGIUNTIVE
+
+;;; get-fields restituisce una lista formattata
+;;; con chiavi di fields
 (defun get-fields (field-part)
   (cond
     ((null field-part) NIL)
@@ -36,46 +80,43 @@
                          :type field-type)))
                (cdr field-part)))))
 
+;;; get-methods restituisce una lista formattata
+;;; con chiavi di metodi
 (defun get-methods (method-part)
   (cond
     ((null method-part) NIL)
     (t (mapcar (lambda (method)
                  (cond
-                   ((not (valid-method-structure method))
+                   ((not (valid-method-structure (cdr method)))
                     (error "ERROR: invalid method structure ~a" method))
                    ((not (symbolp (first method)))
                     (error "ERROR: invalid method name ~a" method))
                    (t (let ((method-name (first method))
-                            (method-body (rest method)))
+                            (method-body (cdr method)))
                         (list :name method-name
                               :body (eval method-body))))))
                (cdr method-part)))))
 
+;;; valid-method-structure verifica che la struttura
+;;; di un metodo sia corretta
 (defun valid-method-structure (method)
   (and (listp method)
        (= (length method) 2)
        (listp (second method))))
 
-;;; make consente di creare un'istanza di una classe
-(defun make (class-name &rest parts)
-  (cond
-    ((is-class class-name)
-     (let ((class-specs (class-spec class-name)))
-       (print parts)
-       (if (verify-instance-fields class-specs parts)
-           (append (list 'oolinst)
-                   (list :class class-name :fields parts)))))
-    (t (error "error: given class not valid"))))
-
+;;; verify-instance-fields verifica che i fields di
+;;; una istanza siano gli stessi della classe istanziata
 (defun verify-instance-fields (class-specs fields)
   (cond
-    ((null fields) t) ;;da rimettere nil
+    ((null fields) t)
     ((not (null (cdr (third class-specs))))
      (let ((class-fields (cdr (third class-specs))))
        (if (deep-member (first fields) class-fields)
            (verify-instance-fields class-specs (nthcdr 2 fields)))))
     (t (error "error: no field in class"))))
 
+;;; deep-member verifica che un elemento passato
+;;; sia contenuto all'interno di una lista passata
 (defun deep-member (atomo lista)
   (cond ((null lista) nil) ; caso base: lista vuota
         ((eq atomo (car lista)) t) ; atomo trovato
@@ -83,26 +124,18 @@
                                  (deep-member atomo (cdr lista)))) ; continua nella lista principale
         (t (deep-member atomo (cdr lista))))) ; continua nella lista principale
 
-;;; is-class verifica che il nome della classe
-;;; passata sia di una classe presente in memoria
-(defun is-class (class-name)
-  (and (symbolp class-name)
-       (gethash class-name classes-specs)))
+;; find-field è una funzione di supporto per field
+;; e si occupa di trovare e restituire il valore del campo field
+;; se il campo non è presente restituisce nil
+(defun find-field (field-name fields)
+  (if (null fields)
+      nil
+      (if (equal field-name (first fields))
+          (second fields)
+          (find-field field-name (nthcdr 2 fields)))))
 
-(defun is-instance (value &optional (class-name T))
-  (if (listp value)
-      (cond ((and (equal (car value) 'OOLINST)
-                  (equal class-name 'T)) T)
-            ((and (equal (car value) 'OOLINST)
-                  (equal (third value) class-name)) T)
-            ((deep-member class-name (second (class-spec (third value)))) T)
-            (t (error
-                "ERROR: given value is not an instance of the specified class")
-               ))
-      (error "ERROR: given value can't be an instance, as value is not a list")
-      ))
 
-;;tests
+;;; TESTS
 (def-class 'person nil '(fields (name "Eve") (age 21 integer)))
-(defparameter adam (make 'person 'name "Adam"))
-(print adam)
+
+;;;; end of file -- ool.lisp
