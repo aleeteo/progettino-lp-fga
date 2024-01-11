@@ -67,12 +67,6 @@
                    (list :class class-name :fields parts)))))
     (t (error "error: given class not valid"))))
 
-;;; is-class verifica che il nome della classe
-;;; passata sia di una classe presente in memoria
-(defun is-class (class-name)
-  (and (symbolp class-name)
-       (gethash class-name classes-specs)))
-
 (defun verify-instance-fields (class-specs fields)
   (cond
     ((null fields) t) ;;da rimettere nil
@@ -88,6 +82,25 @@
         ((listp (car lista)) (or (deep-member atomo (car lista)) ; ricerca ricorsiva nella sottolista
                                  (deep-member atomo (cdr lista)))) ; continua nella lista principale
         (t (deep-member atomo (cdr lista))))) ; continua nella lista principale
+
+;;; is-class verifica che il nome della classe
+;;; passata sia di una classe presente in memoria
+(defun is-class (class-name)
+  (and (symbolp class-name)
+       (gethash class-name classes-specs)))
+
+(defun is-instance (value &optional (class-name T))
+  (if (listp value)
+      (cond ((and (equal (car value) 'OOLINST)
+                  (equal class-name 'T)) T)
+            ((and (equal (car value) 'OOLINST)
+                  (equal (third value) class-name)) T)
+            ((deep-member class-name (second (class-spec (third value)))) T)
+            (t (error
+                "ERROR: given value is not an instance of the specified class")
+               ))
+      (error "ERROR: given value can't be an instance, as value is not a list")
+      ))
 
 ;;tests
 (def-class 'person nil '(fields (name "Eve") (age 21 integer)))
