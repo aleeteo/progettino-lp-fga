@@ -17,7 +17,7 @@
 (defun def-class (class-name parents &rest part)
   (cond
     ((and (symbolp class-name) (listp parents))
-     (let ((fields (get-fields (assoc 'fields part)))
+     (let ((fields (get-fields (assoc 'fields part) parents))
            (methods (get-methods (assoc 'methods part))))
        (add-class-spec class-name (list
                                    (cons 'name class-name)
@@ -82,7 +82,7 @@
 
 ;;; get-fields restituisce una lista formattata
 ;;; con chiavi di fields
-(defun get-fields (field-part)
+(defun get-fields (field-part parents)
   (cond
     ((null field-part) NIL)
     (t (mapcar (lambda (field)
@@ -92,9 +92,14 @@
                                        (third field)
                                        NIL)))
                    (if (or (null field-type) (type-check field-value field-type))
-                       (list :name field-name
-                             :value field-value
-                             :type field-type)
+                       (if (null (mapcar (lambda (parent-name)
+                                           (verify-class-field field-name
+                                                               field-value
+                                                               parent-name))
+                                         parents))
+                           (list :name field-name
+                                 :value field-value
+                                 :type field-type))
                        (error "Type check failed for field ~a" field-name))))
                (cdr field-part)))))
 
@@ -134,23 +139,42 @@
 ;;; una istanza siano gli stessi della classe istanziata
 (defun verify-instance-fields (fields class-name)
   (cond ((null fields) t)
-        (t (if (not (null (field-class (first fields) class-name)))
+        (t (if (not (null (field-class
+                           (first fields)
+                           class-name)))
                (if (type-check (second fields)
                                (first
                                 (list (class-field-type
-                                       (first fields) class-name))))
-                   (verify-instance-fields (nthcdr 2 fields) class-name)
-                   (error "ERROR: type of ~a field not valid" (first fields)))
-               (error "ERROR: class doesn't have ~a field" (first fields))))))
+                                       (first fields)
+                                       class-name))))
+                   (verify-instance-fields (nthcdr 2 fields)
+                                           class-name)
+                   (error "ERROR: type of ~a field not valid"
+                          (first fields)))
+               (error "ERROR: class doesn't have ~a field"
+                      (first fields))))))
+
+;;; come verify-instance-fields, ma per def-class,
+;;; si assicura che i tipi dei campi non vadano in conflitto
+;;; con i campi dei genitori, in aggiunta funziona con un solo
+;;; field alla volta, per seguire il funzionamento di get-fields
+(defun verify-class-field (field-name field-value class-name)
+  (if (not (null (field-class field-name class-name)))
+      (if (type-check field-value
+                      (class-field-type field-name
+                                        class-name))
+          T
+          (error "ERROR: type of ~a field non valid" field-name))
+      T))
 
 ;;; deep-member verifica che un elemento passato
 ;;; sia contenuto all'interno di una lista passata
-(defun deep-member (atomo lista)
-  (cond ((null lista) nil) ; caso base: lista vuota
-        ((eq atomo (car lista)) t) ; atomo trovato
-        ((listp (car lista)) (or (deep-member atomo (car lista)) ; ricerca ricorsiva nella sottolista
-                                 (deep-member atomo (cdr lista)))) ; continua nella lista principale
-        (t (deep-member atomo (cdr lista))))) ; continua nella lista principale
+(defun deep-member (atom list)
+  (cond ((null list) nil) ; caso base: lista vuota
+        ((eq atom (car list)) t) ; atom trovato
+        ((listp (car list)) (or (deep-member atom (car list)) ; ricerca ricorsiva nella sottolista
+                                (deep-member atom (cdr list)))) ; continua nella lista principale
+        (t (deep-member atom (cdr list))))) ; continua nella lista principale
 
 ;;; field-class ha la stessa funzione di field ma sulle classi
 (defun field-class (field-name class-name)
@@ -221,6 +245,6 @@
 (def-class 'c3 nil '(fields (state "Italy") (name "John") (band "AC/DC")))
 (def-class 'c4 '(c2 c3) '(fields (sex "female")))
 
-(defparameter inst (make 'c4))
+;; (defparameter inst (make 'c4))
 
 ;;;; end of file -- ool.lisp
