@@ -1,3 +1,4 @@
+
 ;;;; -*- Mode: Lisp -*-
 ;;;; Melon Cristiano 899647
 ;;;; Teodori Alessandro 899894
@@ -30,10 +31,9 @@
 (defun make (class-name &rest parts)
   (cond
     ((is-class class-name)
-     (let ((class-specs (class-spec class-name)))
-       (if (verify-instance-fields class-specs parts)
-           (append (list 'oolinst)
-                   (list :class class-name :fields parts)))))
+     (if (verify-instance-fields parts class-name)
+         (append (list 'oolinst)
+                 (list :class class-name :fields parts))))
     (t (error "ERROR: given class not valid"))))
 
 ;;; is-class verifica che il nome della classe
@@ -51,8 +51,8 @@
             ((and (equal (car value) 'OOLINST)
                   (equal (third value) class-name)) T)
             ((deep-member class-name (second (class-spec (third value)))) T)
-            (t (error "ERROR: given value is not an instance of the specified class")))
-      (error "ERROR: given value can't be an instance, as value is not a list")))
+            (t (error "ERROR: given value not an instance of the class")))
+      (error "ERROR: given value can't be an instance, value is not a list")))
 
 ;;; field prende come argomenti una istanza e il nome
 ;;; di un campo dell'istanza e ne restituisce il valore
@@ -64,15 +64,19 @@
            (find-field field-name (fifth instance))
            (car (list (field-class field-name (third instance))))))))
 
-(defun field* (instance &rest field-names)
-  (cond ((not (is-instance instance)) (error "ERROR: Not an instance"))
-        ((null field-names) (error "No field names provided"))
-        (t (reduce (lambda (obj field-name)
-                     (if (listp obj)
-                         (field obj field-name)
-                         (error "Intermediate value is not an instance")))
-                   field-names
-                   :initial-value instance))))
+;;; field* estrae il valore da una classe percorrendo
+;;; una catena di attributi
+(defun field* (instance &rest field-name)
+  (cond ((null field-name) (error "ERROR: list is empty!"))
+        ;; ((is-instance
+        ;;         (field instance (if (listp (car field-name))
+        ;;                             (caar field-name) (car field-name)))))
+        ((eq (length field-name) 1)
+         (field instance (if (listp (car field-name))
+                             (caar field-name) (car field-name))))
+        (T (field* (field instance (if (listp (car field-name))
+                                       (caar field-name) (car field-name)))
+                   (cdr field-name)))))
 
 ;;; FUNZIONI AGGIUNTIVE
 
@@ -82,16 +86,25 @@
   (cond
     ((null field-part) NIL)
     (t (mapcar (lambda (field)
-                 (let (
-                       (field-name (first field))
+                 (let ((field-name (first field))
                        (field-value (second field))
                        (field-type (if (not (null (third field)))
                                        (third field)
                                        NIL)))
-                   (list :name field-name
-                         :value field-value
-                         :type field-type)))
+                   (if (or (null field-type) (type-check field-value field-type))
+                       (list :name field-name
+                             :value field-value
+                             :type field-type)
+                       (error "Type check failed for field ~a" field-name))))
                (cdr field-part)))))
+
+;;; typecheck verifica il tipo di una field, controllando che il value sia
+;;; uguale o sottotipo del tipo specificato nella field
+(defun type-check (value expected-type)
+  (cond ((null expected-type) t)
+        (t (let ((actual-type (type-of value)))
+             (first (list (subtypep actual-type expected-type)))))))
+
 
 ;;; get-methods restituisce una lista formattata
 ;;; con chiavi di metodi
@@ -119,14 +132,16 @@
 
 ;;; verify-instance-fields verifica che i fields di
 ;;; una istanza siano gli stessi della classe istanziata
-(defun verify-instance-fields (class-specs fields)
-  (cond
-    ((null fields) t)
-    ((not (null (cdr (third class-specs))))
-     (let ((class-fields (cdr (third class-specs))))
-       (if (deep-member (first fields) class-fields)
-           (verify-instance-fields class-specs (nthcdr 2 fields)))))
-    (t (error "error: no field in class"))))
+(defun verify-instance-fields (fields class-name)
+  (cond ((null fields) t)
+        (t (if (not (null (field-class (first fields) class-name)))
+               (if (type-check (second fields)
+                               (first
+                                (list (class-field-type
+                                       (first fields) class-name))))
+                   (verify-instance-fields (nthcdr 2 fields) class-name)
+                   (error "ERROR: type of ~a field not valid" (first fields)))
+               (error "ERROR: class doesn't have ~a field" (first fields))))))
 
 ;;; deep-member verifica che un elemento passato
 ;;; sia contenuto all'interno di una lista passata
@@ -137,9 +152,19 @@
                                  (deep-member atomo (cdr lista)))) ; continua nella lista principale
         (t (deep-member atomo (cdr lista))))) ; continua nella lista principale
 
-;; find-field è una funzione di supporto per field
-;; e si occupa di trovare e restituire il valore del campo field
-;; se il campo non è presente restituisce nil
+;;; field-class ha la stessa funzione di field ma sulle classi
+(defun field-class (field-name class-name)
+  (let ((class-fields (rest (third (class-spec class-name)))))
+    (if (deep-member field-name class-fields)
+        (find-field field-name class-fields)
+        (values-list
+         (remove nil
+                 (mapcar
+                  (lambda (p) (field-class field-name p))
+                  (second (class-spec class-name))))))))
+
+;;; find-field prende come argomenti un field-name
+;;; e una lista di fields in cui cercare quel campo
 (defun find-field (field-name fields)
   (if (null fields)
       nil
@@ -151,18 +176,51 @@
               (second fields)
               (find-field field-name (cddr fields))))))
 
-;;; field-class uguale a field ma sulle classi
-(defun field-class (field-name class-name)
+
+
+;;; class-field-type funziona come field-class, ma richiama una variante di
+;;; finde-field che restituisce solamente il type del dato field
+(defun class-field-type (field-name class-name)
   (let ((class-fields (rest (third (class-spec class-name)))))
     (if (deep-member field-name class-fields)
-        (find-field field-name class-fields)
+        (find-field-type field-name class-fields)
         (values-list
          (remove nil
                  (mapcar
-                  (lambda (p) (field-class field-name p))
+                  (lambda (p) (class-field-type field-name p))
                   (second (class-spec class-name))))))))
 
+;;; find-field-type prende come argomenti un field-name e una lista
+;;; di fields in cui cercare il dato field e restituirne il tipo
+(defun find-field-type (field-name fields)
+  (if (null fields)
+      nil
+      (if (listp (car fields))
+          (if (equal field-name (second (car fields)))
+              (sixth (car fields))
+              (find-field-type field-name (cdr fields))))))
+
 ;;; TESTS
-(def-class 'person nil '(fields (name "Eve") (age 21 integer)))
+;;(def-class 'person nil '(fields (name "Eve") (age 21 integer)))
+;;(defparameter adam (make 'person 'name "Adam" 'age 21))
+;;(print adam)
+;;(field adam 'age)
+
+
+;; (def-class 'address nil '(fields (city "Unknown City") (street "Unknown Street")))
+;; (def-class 'person nil '(fields (name "Unknown") (address (make 'address))))
+
+;; (defparameter person-instance (make 'person 'name "Alice" 'address (make 'address 'city "Wonderland" 'street "Rabbit Hole Lane")))
+
+;; (field* person-instance 'address 'city)   ; Restituisce "Wonderland"
+;; (field* person-instance 'address 'street) ; Restituisce "Rabbit Hole Lane"
+
+(def-class 'person nil '(fields (name "Eve" string)))
+(def-class 'c1 '(person) '(fields (age 22)))
+(def-class 'c2 '(c1) '(fields (city "Legnano")))
+(def-class 'c3 nil '(fields (state "Italy") (name "John") (band "AC/DC")))
+(def-class 'c4 '(c2 c3) '(fields (sex "female")))
+
+(defparameter inst (make 'c4))
 
 ;;;; end of file -- ool.lisp
