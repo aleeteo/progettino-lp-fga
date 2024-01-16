@@ -5,3 +5,4 @@ tmp/
 esperimenti/
 esempi/
 *.fasl
+.dump*

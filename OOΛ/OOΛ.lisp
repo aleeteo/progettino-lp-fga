@@ -91,7 +91,8 @@
                        (field-type (if (not (null (third field)))
                                        (third field)
                                        NIL)))
-                   (if (or (null field-type) (type-check field-value field-type))
+                   (if (or (null field-type) (type-check field-value
+                                                         field-type))
                        (if (null (mapcar (lambda (parent-name)
                                            (verify-class-field field-name
                                                                field-value
@@ -110,22 +111,19 @@
         (t (let ((actual-type (type-of value)))
              (first (list (subtypep actual-type expected-type)))))))
 
-
-;;; get-methods restituisce una lista formattata
-;;; con chiavi di metodi
 (defun get-methods (method-part)
   (cond
     ((null method-part) NIL)
     (t (mapcar (lambda (method)
-                 (cond
-                   ((not (valid-method-structure (cdr method)))
-                    (error "ERROR: invalid method structure ~a" method))
-                   ((not (symbolp (first method)))
-                    (error "ERROR: invalid method name ~a" method))
-                   (t (let ((method-name (first method))
-                            (method-body (cdr method)))
-                        (list :name method-name
-                              :body (eval method-body))))))
+                 (let ((method-name (first method))
+                       (method-args (cadr method))
+                       (method-body (cddr method)))
+                   ;; Definisci la funzione metodo a livello globale
+                   (eval `(defun ,method-name (this ,@method-args)
+                            ,@method-body))
+                   (list :name method-name
+                         :body (append method-args
+                                       method-body))))
                (cdr method-part)))))
 
 ;;; valid-method-structure verifica che la struttura
@@ -239,12 +237,14 @@
 ;; (field* person-instance 'address 'city)   ; Restituisce "Wonderland"
 ;; (field* person-instance 'address 'street) ; Restituisce "Rabbit Hole Lane"
 
-(def-class 'person nil '(fields (name "Eve" string)))
-(def-class 'c1 '(person) '(fields (age 22)))
-(def-class 'c2 '(c1) '(fields (city "Legnano")))
-(def-class 'c3 nil '(fields (state "Italy") (name "John") (band "AC/DC")))
-(def-class 'c4 '(c2 c3) '(fields (sex "female")))
+;; (def-class 'person nil '(fields (name "Eve" string)))
+;; (def-class 'c1 '(person) '(fields (age 22)))
+;; (def-class 'c2 '(c1) '(fields (city "Legnano")))
+;; (def-class 'c3 nil '(fields (state "Italy") (name "John") (band "AC/DC")))
+;; (def-class 'c4 '(c2 c3) '(fields (sex "female")))
+;; (def-class 'student '(person) '(fields (name "Eva Lu Ator") (university "Berkeley" string)) '(methods (talk (&optional (out *standard-output*)) (format out "My name is ~A~%My age is ~D~%" (field this 'name) (field this 'age)))))
 
-;; (defparameter inst (make 'c4))
+;; (defparameter inst (make 'student))
+
 
 ;;;; end of file -- ool.lisp
