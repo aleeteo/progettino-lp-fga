@@ -1,4 +1,5 @@
 
+
 ;;;; -*- Mode: Lisp -*-
 ;;;; Melon Cristiano 899647
 ;;;; Teodori Alessandro 899894
@@ -16,7 +17,7 @@
 ;;; e inserire in memoria una classe
 (defun def-class (class-name parents &rest part)
   (cond
-    ((and (symbolp class-name) (listp parents))
+    ((and (symbolp class-name) (listp parents) (null (is-class class-name)))
      (let ((fields (get-fields (assoc 'fields part) parents))
            (methods (get-methods (assoc 'methods part))))
        (add-class-spec class-name (list
@@ -25,7 +26,8 @@
                                    (cons 'fields fields)
                                    (cons 'methods methods))))
      class-name)
-    (t (error "ERROR: class-name or parents not valid!"))))
+    (t (error
+        "ERROR: class already present or class-name or parents not valid!"))))
 
 ;;; make consente di creare un'istanza di una classe
 (defun make (class-name &rest parts)
@@ -68,9 +70,6 @@
 ;;; una catena di attributi
 (defun field* (instance &rest field-name)
   (cond ((null field-name) (error "ERROR: list is empty!"))
-        ;; ((is-instance
-        ;;         (field instance (if (listp (car field-name))
-        ;;                             (caar field-name) (car field-name)))))
         ((eq (length field-name) 1)
          (field instance (if (listp (car field-name))
                              (caar field-name) (car field-name))))
@@ -84,7 +83,7 @@
 ;;; con chiavi di fields
 (defun get-fields (field-part parents)
   (cond
-    ((null field-part) NIL)
+    ((null field-part) nil)
     (t (mapcar (lambda (field)
                  (let ((field-name (first field))
                        (field-value (second field))
@@ -168,11 +167,12 @@
 ;;; deep-member verifica che un elemento passato
 ;;; sia contenuto all'interno di una lista passata
 (defun deep-member (atom list)
-  (cond ((null list) nil) ; caso base: lista vuota
-        ((eq atom (car list)) t) ; atom trovato
-        ((listp (car list)) (or (deep-member atom (car list)) ; ricerca ricorsiva nella sottolista
-                                (deep-member atom (cdr list)))) ; continua nella lista principale
-        (t (deep-member atom (cdr list))))) ; continua nella lista principale
+  (cond ((null list) nil)
+        ((eq atom (car list)) t)
+        ((listp (car list))
+         (or (deep-member atom (car list))
+             (deep-member atom (cdr list))))
+        (t (deep-member atom (cdr list)))))
 
 ;;; field-class ha la stessa funzione di field ma sulle classi
 (defun field-class (field-name class-name)
@@ -221,30 +221,5 @@
           (if (equal field-name (second (car fields)))
               (sixth (car fields))
               (find-field-type field-name (cdr fields))))))
-
-;;; TESTS
-;;(def-class 'person nil '(fields (name "Eve") (age 21 integer)))
-;;(defparameter adam (make 'person 'name "Adam" 'age 21))
-;;(print adam)
-;;(field adam 'age)
-
-
-;; (def-class 'address nil '(fields (city "Unknown City") (street "Unknown Street")))
-;; (def-class 'person nil '(fields (name "Unknown") (address (make 'address))))
-
-;; (defparameter person-instance (make 'person 'name "Alice" 'address (make 'address 'city "Wonderland" 'street "Rabbit Hole Lane")))
-
-;; (field* person-instance 'address 'city)   ; Restituisce "Wonderland"
-;; (field* person-instance 'address 'street) ; Restituisce "Rabbit Hole Lane"
-
-;; (def-class 'person nil '(fields (name "Eve" string)))
-;; (def-class 'c1 '(person) '(fields (age 22)))
-;; (def-class 'c2 '(c1) '(fields (city "Legnano")))
-;; (def-class 'c3 nil '(fields (state "Italy") (name "John") (band "AC/DC")))
-;; (def-class 'c4 '(c2 c3) '(fields (sex "female")))
-;; (def-class 'student '(person) '(fields (name "Eva Lu Ator") (university "Berkeley" string)) '(methods (talk (&optional (out *standard-output*)) (format out "My name is ~A~%My age is ~D~%" (field this 'name) (field this 'age)))))
-
-;; (defparameter inst (make 'student))
-
 
 ;;;; end of file -- ool.lisp
