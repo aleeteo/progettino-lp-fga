@@ -7,7 +7,8 @@ Il progetto consiste nell'implemantazione di due estensioni object-oriented:
 
 - OOΛ (scritta per lisp)
 - OOΠ (scritta per prolog)
-  come da direttiva nel file di consegna.
+
+come da direttiva nel file di consegna.
 
 Ai tempi di Simula e del primo Smalltalk, molto molto tempo prima di Python,
 Ruby, Perl e SLDJ, i programmatori Lisp già producevano una pletora
